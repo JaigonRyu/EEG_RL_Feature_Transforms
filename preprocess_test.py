@@ -17,5 +17,5 @@ X_psd = psds.reshape(psds.shape[0], -1)  # Shape: (num_epochs, num_features)
 
 y_labels = np.random.randint(0, 2, size=(X_psd.shape[0],))  # Binary labels
 
-print(X_psd.shape)
-print(X_psd[0])
+#print(X_psd.shape)
+#print(X_psd[0])

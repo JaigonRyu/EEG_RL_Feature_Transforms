@@ -1,9 +1,14 @@
 import itertools
 import numpy as np
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from scipy.spatial.transform import Rotation
 
 class Env:
-    def __init__(self, features, num_rotations, clf, min_features=20):
+    def __init__(self, features,labels, num_rotations, clf, min_features=20):
         self.features = features
+        self.labels = labels
 
         self.num_rotations = num_rotations
         self.clf = clf
@@ -36,6 +41,13 @@ class Env:
         new_state = self.state_space[self.current_state_index]
 
         ## add classifier here
+        new_clf = self.clf
+
+        new_clf.fit(self.features, self.labels)
+
+        #split the data
+        
+
         reward = self.calculate_accuracy(new_state)
         done = False  
 
@@ -62,6 +74,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
 
 class DQNAgent:
     def __init__(self, state_space_size, action_space_size, learning_rate=0.001, gamma=0.99, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.01, batch_size=32, memory_size=10000):
@@ -126,12 +140,13 @@ class DQNAgent:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-# Initialize environment and agent
-
 
 features = ...
 num_rotations = ...
-env = Env(features, num_rotations)
+components = ...
+clf = LinearDiscriminantAnalysis(n_components=components)
+min_features = 100
+env = Env(features, num_rotations, clf, min_features)
 agent = DQNAgent(env.get_state_space_size(), env.get_action_space_size())
 
 
