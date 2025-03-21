@@ -31,16 +31,9 @@ class EEGFeatureEnv(gym.Env):
 
         self.observation_space = gym.spaces.Box(low=-100000, high=100000, shape=(X_train.shape[1],), dtype=np.float32)
 
-        #self.action_space = gym.spaces.Discrete(10)
-
-        #continous action space for more learning first var in (2, ) for jitter and 
         self.action_space = gym.spaces.Box(low=-550.0, high=550.0, shape=(2,), dtype=np.float32)
 
     def step(self, action):
-
-        #print(f"Agent took action: {action}")
-
-        print('beginning step')
 
         rotation_value, jitter_value = action
 
@@ -50,32 +43,26 @@ class EEGFeatureEnv(gym.Env):
 
         feature_vector = self.transformed_X[self.curr_ind].copy()
 
-        #feature_vector = self.apply_jitter(feature_vector, action)
-        #feature_vector = self.apply_jitter(feature_vector, action)
-
         feature_vector = self.apply_rotation_cont(feature_vector, rotation_value)
         #feature_vector = self.apply_jitter_cont(feature_vector, jitter_value)
-        
-       # transformed_X = self.X_train.copy()
 
         self.transformed_X[self.curr_ind] = feature_vector
         self.feature_replay_buffer.append(feature_vector.copy())
 
         accuracy = self.compute_tot_accuracy(self.transformed_X, self.y_train)
 
-
-        #print(accuracy)
-
-        #reward = (accuracy - self.initial_acc) * 100 - 0.1 * self.compute_kl_divergence(transformed_X) - 0.1 * self.compute_subject_variability(transformed_X)
-
+        #new transformed vector accuracy - raw feature init acc
+        #scaled up by 100
         reward = accuracy - self.initial_acc * 100 
 
+        #if pos reward add a little bit extra 
         if reward > 0:
             reward += 250
         
+        #if negative reward punish heavily
         else:
             reward -= 50 
-        #print(reward)
+        
 
         if self.curr_ind not in self.best_features or reward > self.best_features[self.curr_ind][1]:
             self.best_features[self.curr_ind] = (feature_vector.copy(), reward)
@@ -91,34 +78,26 @@ class EEGFeatureEnv(gym.Env):
 
         return feature_vector, reward, done, {}
 
-    def compute_subject_variability(self, transformed_X):
-        predictions = [self.classifier.predict(x) for x in self.tot_X]
-        std_dev = np.std(predictions, axis=0)  # Variability across subjects
-        return np.mean(std_dev)  # Lower is better
+    # def apply_rotation(self, feature_vector, action):
+    #     """ Apply small incremental rotations using a random orthogonal matrix. """
 
-    
-    from scipy.stats import special_ortho_group
-
-    def apply_rotation(self, feature_vector, action):
-        """ Apply small incremental rotations using a random orthogonal matrix. """
-
-        rotation_levels = np.linspace(-10, 10, num=10)  # Rotation angles from -10° to 10°
-        rotation_angle = rotation_levels[action]
+    #     rotation_levels = np.linspace(-10, 10, num=10)  # Rotation angles from -10° to 10°
+    #     rotation_angle = rotation_levels[action]
         
-        dim = len(feature_vector)  # Get the feature vector size
+    #     dim = len(feature_vector)  # Get the feature vector size
     
-        if dim < 2:
-            return feature_vector  # Can't rotate a single value
+    #     if dim < 2:
+    #         return feature_vector  # Can't rotate a single value
         
-        # Generate a random rotation matrix for the entire feature space
-        dim = len(feature_vector)
-        rotation_matrix = special_ortho_group.rvs(dim)
+    #     # Generate a random rotation matrix for the entire feature space
+    #     dim = len(feature_vector)
+    #     rotation_matrix = special_ortho_group.rvs(dim)
         
-        feature_vector = np.dot(rotation_matrix, feature_vector)
+    #     feature_vector = np.dot(rotation_matrix, feature_vector)
 
-        return feature_vector
+    #     return feature_vector
     
-    def apply_rotation_cont(sefl, feature_vector, rotation_value):
+    def apply_rotation_cont(self, feature_vector, rotation_value):
 
         dim = len(feature_vector)
         if dim < 2:
@@ -132,13 +111,13 @@ class EEGFeatureEnv(gym.Env):
 
         return rotated_vector
 
-    def apply_jitter(self, feature_vector, action):
+    # def apply_jitter(self, feature_vector, action):
         
-        levels = [0.0,0.8,0.5, 0.1,0.08, 0.05, 0.01,0.008, 0.005, 0.001]
-        noise_level = levels[action]
+    #     levels = [0.0,0.8,0.5, 0.1,0.08, 0.05, 0.01,0.008, 0.005, 0.001]
+    #     noise_level = levels[action]
 
-        feature_vector += np.random.normal(0, noise_level, feature_vector.shape)
-        return  feature_vector
+    #     feature_vector += np.random.normal(0, noise_level, feature_vector.shape)
+    #     return  feature_vector
 
     def apply_jitter_cont(self, feature_vector, jitter_value):
 
@@ -151,11 +130,11 @@ class EEGFeatureEnv(gym.Env):
     def compute_tot_accuracy(self, transformed_X, y_train):
 
         self.classifier.fit(transformed_X, y_train)
-        print('not working')
+        
 
         tot_acc = []
 
-        
+
 
         for x, label in zip(self.tot_X, self.tot_y):
 
@@ -173,12 +152,10 @@ class EEGFeatureEnv(gym.Env):
 
         return mean_acc
 
-    
-
 
     def reset(self):
 
-        print('reset started')
+        #print('reset started')
         #print(self.initial_acc)
         if not hasattr(self, "transformed_X"):  # Only initialize once
             self.transformed_X = self.X_train.copy()
@@ -194,8 +171,6 @@ class EEGFeatureEnv(gym.Env):
 
         self.initial_acc = self.compute_tot_accuracy(self.transformed_X, self.y_train)
         #print(self.initial_acc)
-
-        print('reset worked')
 
         return self.transformed_X[self.curr_ind]
     
